@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>하기 싫다</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Gaegu:wght@700&family=Do+Hyeon&family=Gamja+Flower&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0d0d0f;
+    cursor: not-allowed;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,60,90,0.10), transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(60,120,255,0.10), transparent 40%),
+      radial-gradient(circle at 50% 90%, rgba(255,200,40,0.07), transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #stage { position: fixed; inset: 0; z-index: 1; }
+
+  .word {
+    position: absolute;
+    font-family: var(--f, 'Black Han Sans'), sans-serif;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(var(--r, 0deg));
+    animation: pop var(--life, 2.4s) cubic-bezier(.22,1,.36,1) forwards;
+    text-shadow: 2px 3px 0 rgba(0,0,0,0.35);
+  }
+
+  @keyframes pop {
+    0%   { opacity: 0; transform: translate(-50%,-50%) rotate(var(--r)) scale(0.15); }
+    16%  { opacity: 1; transform: translate(-50%,-50%) rotate(var(--r)) scale(1.12); }
+    28%  { transform: translate(-50%,-50%) rotate(var(--r)) scale(1); }
+    76%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%,-50%) rotate(var(--r)) scale(0.85); }
+  }
+
+  /* 10초마다 화면을 글자로 꽉 채우기 */
+  #fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: #ff2d55;
+    color: #fff;
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: min(52vw, 60vh);
+    letter-spacing: -0.04em;
+    text-align: center;
+    line-height: 0.82;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  #fullscreen span { display: block; }
+
+  #fullscreen.show { animation: slam 2.4s cubic-bezier(.18,.9,.25,1) forwards; }
+
+  @keyframes slam {
+    0%   { opacity: 0; transform: scale(1.5) rotate(-4deg); background:#ff2d55; }
+    8%   { opacity: 1; transform: scale(0.97) rotate(1.5deg); }
+    16%  { transform: scale(1.03) rotate(-0.8deg); }
+    26%  { transform: scale(1) rotate(0deg); background:#1a1aff; }
+    42%  { background:#ffcc00; color:#111; }
+    58%  { background:#00d68f; color:#fff; }
+    74%  { background:#bf5af2; }
+    88%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.65) rotate(3deg); }
+  }
+
+  #hint {
+    position: fixed; bottom: 14px; left: 50%;
+    transform: translateX(-50%); z-index: 40;
+    font-family: 'Do Hyeon', sans-serif; font-size: 14px;
+    color: rgba(255,255,255,0.35); letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+
+  #counter {
+    position: fixed; top: 14px; right: 18px; z-index: 40;
+    font-family: 'Jua', sans-serif; font-size: 14px;
+    color: rgba(255,255,255,0.4); pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="fullscreen"><span>하기</span><span>싫다</span></div>
+  <div id="counter">하기 싫은 횟수: <span id="count">0</span></div>
+  <div id="hint">아무것도 하고 싶지 않은 사람을 위한 페이지</div>
+
+<script>
+  const stage = document.getElementById('stage');
+  const fullscreen = document.getElementById('fullscreen');
+  const countEl = document.getElementById('count');
+
+  const text = "하기 싫다";
+  const fonts = ["'Black Han Sans'", "'Jua'", "'Gaegu'", "'Do Hyeon'", "'Gamja Flower'"];
+
+  let count = 0;
+  const rand = (min, max) => Math.random() * (max - min) + min;
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  // 무한히 다양한 색: 랜덤 HSL (선명하고 밝게)
+  function randColor() {
+    const h = Math.floor(rand(0, 360));
+    const s = Math.floor(rand(70, 100));
+    const l = Math.floor(rand(50, 75));
+    return `hsl(${h} ${s}% ${l}%)`;
+  }
+
+  function spawnWord() {
+    const el = document.createElement('div');
+    el.className = 'word';
+    el.textContent = text;
+
+    const size = rand(14, 240);     // 크기 더 다양하게
+    const life = rand(1.8, 3.4);
+    const rot = rand(-45, 45);
+
+    el.style.setProperty('--f', pick(fonts));
+    el.style.setProperty('--r', rot + 'deg');
+    el.style.setProperty('--life', life + 's');
+    el.style.fontSize = size + 'px';
+    el.style.color = randColor();
+    el.style.left = rand(3, 97) + 'vw';
+    el.style.top = rand(5, 95) + 'vh';
+
+    stage.appendChild(el);
+    count++;
+    countEl.textContent = count;
+
+    setTimeout(() => el.remove(), life * 1000 + 100);
+  }
+
+  // 약 1초(0.4~1.6초) 간격으로 한 번에 여러 개씩 마구 생성
+  function loop() {
+    const burst = Math.floor(rand(1, 5)); // 동시에 1~4개
+    for (let i = 0; i < burst; i++) spawnWord();
+    setTimeout(loop, rand(400, 1600));
+  }
+  loop();
+
+  // 10초마다 화면 꽉 채우기
+  setInterval(() => {
+    fullscreen.classList.remove('show');
+    void fullscreen.offsetWidth;
+    fullscreen.classList.add('show');
+  }, 10000);
+</script>
+</body>
+</html>
