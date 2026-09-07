@@ -15,7 +15,7 @@
     height: 100%;
     overflow: hidden;
     background: #0d0d0f;
-    cursor: not-allowed;
+    cursor: pointer;
   }
 
   body::before {
@@ -43,12 +43,25 @@
     text-shadow: 2px 3px 0 rgba(0,0,0,0.35);
   }
 
+  /* 클릭으로 생성된 글자는 좀 더 통통 튀는 느낌 */
+  .word.click-word {
+    animation: popClick var(--life, 1.4s) cubic-bezier(.2,1.4,.3,1) forwards;
+  }
+
   @keyframes pop {
     0%   { opacity: 0; transform: translate(-50%,-50%) rotate(var(--r)) scale(0.15); }
     16%  { opacity: 1; transform: translate(-50%,-50%) rotate(var(--r)) scale(1.12); }
     28%  { transform: translate(-50%,-50%) rotate(var(--r)) scale(1); }
     76%  { opacity: 1; }
     100% { opacity: 0; transform: translate(-50%,-50%) rotate(var(--r)) scale(0.85); }
+  }
+
+  @keyframes popClick {
+    0%   { opacity: 0; transform: translate(-50%,-50%) rotate(var(--r)) scale(0.1); }
+    20%  { opacity: 1; transform: translate(-50%,-50%) rotate(var(--r)) scale(1.3); }
+    35%  { transform: translate(-50%,-50%) rotate(var(--r)) scale(1); }
+    75%  { opacity: 1; transform: translate(-50%,-50%) rotate(var(--r)) scale(1) translateY(0); }
+    100% { opacity: 0; transform: translate(-50%,-50%) rotate(var(--r)) scale(0.9) translateY(-40px); }
   }
 
   /* 10초마다 화면을 글자로 꽉 채우기 */
@@ -107,7 +120,7 @@
   <div id="stage"></div>
   <div id="fullscreen"><span>하기</span><span>싫다</span></div>
   <div id="counter">하기 싫은 횟수: <span id="count">0</span></div>
-  <div id="hint">아무것도 하고 싶지 않은 사람을 위한 페이지</div>
+  <div id="hint">아무것도 하고 싶지 않은 사람을 위한 페이지 · 화면을 클릭해보세요</div>
 
 <script>
   const stage = document.getElementById('stage');
@@ -129,22 +142,31 @@
     return `hsl(${h} ${s}% ${l}%)`;
   }
 
-  function spawnWord() {
+  // leftVW / topVH 를 직접 지정할 수 있도록 옵션화 (클릭 위치용)
+  function spawnWord(opts = {}) {
     const el = document.createElement('div');
     el.className = 'word';
     el.textContent = text;
 
-    const size = rand(14, 240);     // 크기 더 다양하게
-    const life = rand(1.8, 3.4);
-    const rot = rand(-45, 45);
+    const size = opts.size ?? rand(14, 240);
+    const life = opts.life ?? rand(1.8, 3.4);
+    const rot = opts.rot ?? rand(-45, 45);
 
     el.style.setProperty('--f', pick(fonts));
     el.style.setProperty('--r', rot + 'deg');
     el.style.setProperty('--life', life + 's');
     el.style.fontSize = size + 'px';
-    el.style.color = randColor();
-    el.style.left = rand(3, 97) + 'vw';
-    el.style.top = rand(5, 95) + 'vh';
+    el.style.color = opts.color ?? randColor();
+
+    if (opts.leftPx !== undefined && opts.topPx !== undefined) {
+      el.style.left = opts.leftPx + 'px';
+      el.style.top = opts.topPx + 'px';
+    } else {
+      el.style.left = rand(3, 97) + 'vw';
+      el.style.top = rand(5, 95) + 'vh';
+    }
+
+    if (opts.isClick) el.classList.add('click-word');
 
     stage.appendChild(el);
     count++;
@@ -167,6 +189,32 @@
     void fullscreen.offsetWidth;
     fullscreen.classList.add('show');
   }, 10000);
+
+  // 클릭하면 클릭한 위치에 "하기 싫다" 등장
+  function handleClick(x, y) {
+    // 살짝 랜덤하게 여러 개 터뜨려서 손맛을 더함
+    const burst = Math.floor(rand(1, 3)); // 1~2개
+    for (let i = 0; i < burst; i++) {
+      spawnWord({
+        leftPx: x + rand(-18, 18),
+        topPx: y + rand(-18, 18),
+        size: rand(32, 90),
+        life: rand(1.1, 1.7),
+        isClick: true
+      });
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    handleClick(e.clientX, e.clientY);
+  });
+
+  // 모바일 터치 대응
+  document.addEventListener('touchstart', (e) => {
+    for (const t of e.changedTouches) {
+      handleClick(t.clientX, t.clientY);
+    }
+  }, { passive: true });
 </script>
 </body>
 </html>
